@@ -46,10 +46,10 @@ msr_handler::msr_handler(
     vcpu->add_exit_handler({&msr_handler::isolate_msr__on_exit, this});
     vcpu->add_resume_delegate({&msr_handler::isolate_msr__on_world_switch, this});
 
-    if (vcpu->is_domU()) {
+    // if (vcpu->is_domU()) {
         vcpu->trap_on_all_rdmsr_accesses();
         vcpu->trap_on_all_wrmsr_accesses();
-    }
+    // }
 
     this->isolate_msr(::x64::msrs::ia32_star::addr);
     this->isolate_msr(::x64::msrs::ia32_lstar::addr);
@@ -61,13 +61,26 @@ msr_handler::msr_handler(
         return;
     }
 
-    vcpu->pass_through_msr_access(::x64::msrs::ia32_pat::addr);
-    vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_efer::addr);
-    vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_fs_base::addr);
-    vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_gs_base::addr);
-    vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_sysenter_cs::addr);
-    vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_sysenter_eip::addr);
-    vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_sysenter_esp::addr);
+    // vcpu->pass_through_msr_access(::x64::msrs::ia32_pat::addr);
+    // vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_efer::addr);
+    // vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_fs_base::addr);
+    // vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_gs_base::addr);
+    // vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_sysenter_cs::addr);
+    // vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_sysenter_eip::addr);
+    // vcpu->pass_through_msr_access(::intel_x64::msrs::ia32_sysenter_esp::addr);
+
+    EMULATE_MSR(::x64::msrs::ia32_pat::addr, handle_rdmsr_pass_through, handle_wrmsr_pass_through);
+    EMULATE_MSR(::intel_x64::msrs::ia32_efer::addr, handle_rdmsr_pass_through, handle_wrmsr_pass_through);
+    EMULATE_MSR(::intel_x64::msrs::ia32_fs_base::addr, handle_rdmsr_pass_through, handle_wrmsr_pass_through);
+    EMULATE_MSR(::intel_x64::msrs::ia32_gs_base::addr, handle_rdmsr_pass_through, handle_wrmsr_pass_through);
+    EMULATE_MSR(::intel_x64::msrs::ia32_sysenter_cs::addr, handle_rdmsr_pass_through, handle_wrmsr_pass_through);
+    EMULATE_MSR(::intel_x64::msrs::ia32_sysenter_eip::addr, handle_rdmsr_pass_through, handle_wrmsr_pass_through);
+    EMULATE_MSR(::intel_x64::msrs::ia32_sysenter_esp::addr, handle_rdmsr_pass_through, handle_wrmsr_pass_through);
+
+
+
+
+
 
     EMULATE_MSR(0x00000034, handle_rdmsr_0x00000034, handle_wrmsr_0x00000034);
     EMULATE_MSR(0x00000140, handle_rdmsr_0x00000140, handle_wrmsr_0x00000140);
@@ -82,7 +95,8 @@ msr_handler::msr_handler(
 void
 msr_handler::isolate_msr(uint32_t msr)
 {
-    m_vcpu->pass_through_rdmsr_access(msr);
+    // m_vcpu->pass_through_rdmsr_access(msr);
+    m_vcpu->emulate_rdmsr(msr, {&msr_handler::handle_rdmsr_pass_through, this});
     ADD_WRMSR_HANDLER(msr, isolate_msr__on_write);
 
     if (m_vcpu->is_dom0()) {
@@ -182,6 +196,32 @@ msr_handler::isolate_msr__on_write(
 // -----------------------------------------------------------------------------
 // Handlers
 // -----------------------------------------------------------------------------
+
+bool
+msr_handler::handle_rdmsr_pass_through(
+    vcpu_t *vcpu, bfvmm::intel_x64::rdmsr_handler::info_t &info)
+{
+    info.val = emulate_rdmsr(
+            gsl::narrow_cast<::x64::msrs::field_type>(vcpu->rcx())
+        );
+
+    return true;
+}
+
+bool
+msr_handler::handle_wrmsr_pass_through(
+    vcpu_t *vcpu, bfvmm::intel_x64::wrmsr_handler::info_t &info)
+{
+    emulate_wrmsr(info.msr, info.val);
+    return true;
+}
+
+
+
+
+
+
+
 
 bool
 msr_handler::handle_rdmsr_0x00000034(

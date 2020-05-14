@@ -31,16 +31,19 @@
 
 int main(void)
 {
+    char const * const args[] = {""};
     mount("proc", "/proc", "proc", 0, "");
 
     freopen("/dev/ttyprintk", "w", stdout);
     freopen("/dev/ttyprintk", "w", stderr);
 
     while (1) {
-        auto rawtime = time(0);
-        auto loctime = localtime(&rawtime);
+        system("/bin/date");
+        // auto rawtime = time(0);
+        // auto loctime = localtime(&rawtime);
 
-        printf("hello from init: %s", asctime(loctime));
-        sleep(1);
+        // printf("%d\n", WEXITSTATUS(system("/bin/date")));
+        // printf("hello from init: %s", asctime(loctime));
+        // sleep(1);
     }
 }
