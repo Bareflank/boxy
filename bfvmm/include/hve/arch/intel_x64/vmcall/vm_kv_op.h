@@ -19,11 +19,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef EMULATION_CPUID_INTEL_X64_BOXY_H
-#define EMULATION_CPUID_INTEL_X64_BOXY_H
+#ifndef VMCALL_VM_KV_OP_INTEL_X64_BOXY_H
+#define VMCALL_VM_KV_OP_INTEL_X64_BOXY_H
 
 #include <bfvmm/hve/arch/intel_x64/vcpu.h>
-#include <bfvmm/hve/arch/intel_x64/vmexit/cpuid.h>
 
 // -----------------------------------------------------------------------------
 // Definitions
@@ -34,7 +33,7 @@ namespace boxy::intel_x64
 
 class vcpu;
 
-class cpuid_handler
+class vm_kv_op_handler
 {
 public:
 
@@ -43,9 +42,7 @@ public:
     /// @expects
     /// @ensures
     ///
-    /// @param vcpu the vcpu object for this handler
-    ///
-    cpuid_handler(
+    vm_kv_op_handler(
         gsl::not_null<vcpu *> vcpu);
 
     /// Destructor
@@ -53,37 +50,11 @@ public:
     /// @expects
     /// @ensures
     ///
-    ~cpuid_handler() = default;
+    ~vm_kv_op_handler() = default;
 
-public:
+private:
 
-    /// @cond
-
-    bool handle_0x00000000(vcpu_t *vcpu);
-    bool handle_0x00000001(vcpu_t *vcpu);
-    bool handle_0x00000002(vcpu_t *vcpu);
-    bool handle_0x00000004(vcpu_t *vcpu);
-    bool handle_0x00000006(vcpu_t *vcpu);
-    bool handle_0x00000007(vcpu_t *vcpu);
-    bool handle_0x0000000A(vcpu_t *vcpu);
-    bool handle_0x0000000B(vcpu_t *vcpu);
-    bool handle_0x0000000D(vcpu_t *vcpu);
-    bool handle_0x0000000F(vcpu_t *vcpu);
-    bool handle_0x00000010(vcpu_t *vcpu);
-    bool handle_0x80000000(vcpu_t *vcpu);
-    bool handle_0x80000001(vcpu_t *vcpu);
-    bool handle_0x80000002(vcpu_t *vcpu);
-    bool handle_0x80000003(vcpu_t *vcpu);
-    bool handle_0x80000004(vcpu_t *vcpu);
-    bool handle_0x80000007(vcpu_t *vcpu);
-    bool handle_0x80000008(vcpu_t *vcpu);
-
-    bool handle_0x40000000(vcpu_t *vcpu);
-    bool handle_0x40000200(vcpu_t *vcpu);
-    bool handle_0x40000201(vcpu_t *vcpu);
-    bool handle_0x40000202(vcpu_t *vcpu);
-
-    /// @endcond
+    bool dispatch(vcpu *vcpu);
 
 private:
 
@@ -93,11 +64,11 @@ public:
 
     /// @cond
 
-    cpuid_handler(cpuid_handler &&) = default;
-    cpuid_handler &operator=(cpuid_handler &&) = default;
+    vm_kv_op_handler(vm_kv_op_handler &&) = default;
+    vm_kv_op_handler &operator=(vm_kv_op_handler &&) = default;
 
-    cpuid_handler(const cpuid_handler &) = delete;
-    cpuid_handler &operator=(const cpuid_handler &) = delete;
+    vm_kv_op_handler(const vm_kv_op_handler &) = delete;
+    vm_kv_op_handler &operator=(const vm_kv_op_handler &) = delete;
 
     /// @endcond
 };

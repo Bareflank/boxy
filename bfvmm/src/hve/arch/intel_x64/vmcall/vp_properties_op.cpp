@@ -19,37 +19,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma GCC diagnostic ignored "-Wunused-result"
+#include <hve/arch/intel_x64/vcpu.h>
+#include <hve/arch/intel_x64/domain.h>
+#include <hve/arch/intel_x64/vmcall/vp_properties_op.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <sys/mount.h>
-#include <sys/wait.h>
-#include <time.h>
-
-extern "C" uint64_t sse_test(uint64_t);
-
-int main(void)
+namespace boxy::intel_x64
 {
-    srand(time(0));
-    mount("proc", "/proc", "proc", 0, "");
 
-    freopen("/dev/ttyprintk", "w", stdout);
-    freopen("/dev/ttyprintk", "w", stderr);
+vp_properties_op_handler::vp_properties_op_handler(
+    gsl::not_null<vcpu *> vcpu
+) :
+    m_vcpu{vcpu}
+{
+    if (vcpu->is_domU()) {
+        return;
+    }
 
-    if (fork() == 0) {
-        int64_t val{rand() % 10};
-        printf("running sse test with val: %ld\n", val);
-        while (1) {
-            if (sse_test(val) != val) {
-                asm("hlt");
-            }
-        }
-    }
-    else {
-        wait(NULL);
-    }
+    vcpu->add_vmcall_handler({&vp_properties_op_handler::dispatch, this});
 }
 
+bool
+vp_properties_op_handler::dispatch(vcpu *vcpu)
+{
+    if (mv_hypercall_opcode(vcpu->rax()) != MV_VP_PROPERTIES_OP_VAL) {
+        return false;
+    }
+
+    // TODO: Validate the handle
+
+    switch (mv_hypercall_index(vcpu->rax())) {
+        default:
+            break;
+    };
+
+    vcpu->set_rax(MV_STATUS_FAILURE_UNKNOWN_HYPERCALL);
+    return true;
+}
+
+}

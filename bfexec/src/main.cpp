@@ -72,14 +72,14 @@ _vmcall(uint64_t r1, uint64_t r2, uint64_t r3, uint64_t r4) noexcept
 #define TIME_UTC 1
 #define timespec_get __timespec_get
 
-typedef int (* p_timespec_get)(void*, int);
+typedef int (* p_timespec_get)(void *, int);
 static p_timespec_get __timespec_get;
 
 void
 dl_timespec_get()
 {
     timespec_get = (p_timespec_get) GetProcAddress(
-        LoadLibrary(TEXT("ucrtbase.dll")), "_timespec64_get");
+                       LoadLibrary(TEXT("ucrtbase.dll")), "_timespec64_get");
     if (!timespec_get) {
         std::cerr << "win32 error: " << GetLastError() << "\n";
         throw std::runtime_error("Failed to load timespec_get dynamically.");
@@ -95,7 +95,7 @@ rdtsc()
     return static_cast<uint64_t>(__rdtsc());
 #else
     uint64_t hi, lo;
-    __asm__ __volatile__ ("lfence;rdtsc" : "=a"(lo), "=d"(hi));
+    __asm__ __volatile__("lfence;rdtsc" : "=a"(lo), "=d"(hi));
     return (hi << 32) | lo;
 #endif
 }
@@ -158,7 +158,7 @@ set_wallclock()
 
         diff1 = static_cast<int>(current_tsc - initial_tsc);
     }
-    while(std::abs(diff1 - diff2) > 100);
+    while (std::abs(diff1 - diff2) > 100);
 
     // Note
     //
@@ -170,9 +170,9 @@ set_wallclock()
     status_t ret = 0;
 
     ret |= hypercall_vclock_op__set_host_wallclock_rtc(
-        g_vcpuid, ts.tv_sec, ts.tv_nsec);
+               g_vcpuid, ts.tv_sec, ts.tv_nsec);
     ret |= hypercall_vclock_op__set_host_wallclock_tsc(
-        g_vcpuid, initial_tsc + static_cast<uint64_t>(diff1 / 2));
+               g_vcpuid, initial_tsc + static_cast<uint64_t>(diff1 / 2));
 
     return ret == SUCCESS;
 }
@@ -375,7 +375,7 @@ uart_thread()
 {
     auto buf = reinterpret_cast<char *>(alloc_locked_buffer(UART_MAX_BUFFER));
 
-    auto ___ = gsl::finally([&](){
+    auto ___ = gsl::finally([&]() {
         free_locked_buffer(buf, UART_MAX_BUFFER);
     });
 

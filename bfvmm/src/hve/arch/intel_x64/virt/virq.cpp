@@ -39,7 +39,7 @@ virq_handler::virq_handler(
     }
 
     m_vcpu->add_vmcall_handler(
-        {&virq_handler::dispatch, this}
+    {&virq_handler::dispatch, this}
     );
 }
 

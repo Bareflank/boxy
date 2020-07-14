@@ -33,7 +33,7 @@ static uint64_t
 calibrate_tsc_freq_khz()
 {
     using namespace ::intel_x64::cpuid;
-	auto [eax, ebx, ecx, edx] = ::x64::cpuid::get(0x15, 0, 0, 0);
+    auto [eax, ebx, ecx, edx] = ::x64::cpuid::get(0x15, 0, 0, 0);
 
     // Notes:
     //
@@ -60,7 +60,7 @@ calibrate_tsc_freq_khz()
     //
 
     if (ecx == 0) {
-        switch(feature_information::eax::get() & 0x000F00F0) {
+        switch (feature_information::eax::get() & 0x000F00F0) {
             case 0x400E0:
             case 0x500E0:
             case 0x800E0:
@@ -84,7 +84,7 @@ calibrate_tsc_freq_khz()
         ecx /= 1000;
     }
 
-	if (eax == 0 || ebx == 0 || ecx == 0) {
+    if (eax == 0 || ebx == 0 || ecx == 0) {
         // We fail silently here giving an opportunity for bfexec to report
         // the error to the user without the need to debug over serial.
         return 0;

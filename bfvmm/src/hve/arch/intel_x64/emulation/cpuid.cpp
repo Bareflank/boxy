@@ -39,6 +39,13 @@ cpuid_handler::cpuid_handler(
 {
     using namespace vmcs_n;
 
+    EMULATE_CPUID(0x00000001, handle_0x00000001);
+
+    EMULATE_CPUID(0x40000000, handle_0x40000000);
+    EMULATE_CPUID(0x40000200, handle_0x40000200);
+    EMULATE_CPUID(0x40000201, handle_0x40000201);
+    EMULATE_CPUID(0x40000202, handle_0x40000202);
+
     if (vcpu->is_dom0()) {
         return;
     }
@@ -46,7 +53,6 @@ cpuid_handler::cpuid_handler(
     vcpu->enable_cpuid_whitelisting();
 
     EMULATE_CPUID(0x00000000, handle_0x00000000);
-    EMULATE_CPUID(0x00000001, handle_0x00000001);
     EMULATE_CPUID(0x00000002, handle_0x00000002);
     EMULATE_CPUID(0x00000004, handle_0x00000004);
     EMULATE_CPUID(0x00000006, handle_0x00000006);
@@ -63,8 +69,6 @@ cpuid_handler::cpuid_handler(
     EMULATE_CPUID(0x80000004, handle_0x80000004);
     EMULATE_CPUID(0x80000007, handle_0x80000007);
     EMULATE_CPUID(0x80000008, handle_0x80000008);
-
-    EMULATE_CPUID(0x40000000, handle_0x40000000);
 }
 
 // -----------------------------------------------------------------------------
@@ -83,15 +87,13 @@ cpuid_handler::handle_0x00000001(vcpu_t *vcpu)
 {
     vcpu->execute_cpuid();
 
-    vcpu->set_rcx(vcpu->rcx() & 0x61FC3203);
+    if (m_vcpu->is_dom0()) {
+        vcpu->set_rcx(vcpu->rcx() | 0x80000000);
+        return vcpu->advance();
+    }
+
+    vcpu->set_rcx((vcpu->rcx() & 0x61FC3203) | 0x80000000);
     vcpu->set_rdx(vcpu->rdx() & 0x1FCBFBFB);
-
-    // Note:
-    //
-    // The following tells Linux that it is in a VM.
-    //
-
-    vcpu->set_rcx(vcpu->rcx() | 0x80000000);
 
     return vcpu->advance();
 }
@@ -274,7 +276,44 @@ cpuid_handler::handle_0x80000008(vcpu_t *vcpu)
 bool
 cpuid_handler::handle_0x40000000(vcpu_t *vcpu)
 {
-    vcpu->set_rax(0xBFBFBFBF);
+    vcpu->set_rax(MV_CPUID_MIN_LEAF_VAL);
+    vcpu->set_rdx(0x0);
+    vcpu->set_rdx(0x0);
+    vcpu->set_rdx(0x0);
+
+    return vcpu->advance();
+}
+
+bool
+cpuid_handler::handle_0x40000200(vcpu_t *vcpu)
+{
+    vcpu->set_rax(0x0);
+    vcpu->set_rbx(MV_CPUID_VENDOR_ID1_VAL);
+    vcpu->set_rcx(MV_CPUID_VENDOR_ID2_VAL);
+    vcpu->set_rdx(0x0);
+
+    return vcpu->advance();
+}
+
+bool
+cpuid_handler::handle_0x40000201(vcpu_t *vcpu)
+{
+    vcpu->set_rax(MV_CPUID_SPEC_ID1);
+    vcpu->set_rbx(0x0);
+    vcpu->set_rcx(0x0);
+    vcpu->set_rdx(0x0);
+
+    return vcpu->advance();
+}
+
+bool
+cpuid_handler::handle_0x40000202(vcpu_t *vcpu)
+{
+    vcpu->set_rax(0x0);
+    vcpu->set_rbx(0x0);
+    vcpu->set_rcx(0x0);
+    vcpu->set_rdx(0x0);
+
     return vcpu->advance();
 }
 

@@ -35,7 +35,7 @@ external_interrupt_handler::external_interrupt_handler(
     }
 
     m_vcpu->add_external_interrupt_handler(
-        {&external_interrupt_handler::handle, this});
+    {&external_interrupt_handler::handle, this});
 }
 
 // -----------------------------------------------------------------------------

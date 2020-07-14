@@ -26,6 +26,14 @@
 
 using namespace bfvmm::intel_x64;
 
+// TODO:
+// - The current domain code is not thread-safe. Some of this will be addressed
+//   once this code is ported to AUTOSAR as you cannot pass a reference to a
+//   private member variable. Once we have getters/setters for everything, we
+//   can use a lock guard to ensure a domain can be accessed by many vCPUs at
+//   the same time.
+//
+
 // -----------------------------------------------------------------------------
 // Implementation
 // -----------------------------------------------------------------------------

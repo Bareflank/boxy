@@ -414,6 +414,9 @@ public:
     bfvmm::intel_x64::ept::mmap &ept()
     { return m_ept_map; }
 
+    mv_mdl_t &e820_map()
+    { return m_e820_map; }
+
     gsl::not_null<bfvmm::intel_x64::vcpu_global_state_t *>
     global_state()
     { return &m_vcpu_global_state; }
@@ -425,8 +428,9 @@ private:
 
 private:
 
-    bfvmm::intel_x64::ept::mmap m_ept_map;
-    bfvmm::intel_x64::vcpu_global_state_t m_vcpu_global_state;
+    bfvmm::intel_x64::ept::mmap m_ept_map{};
+    mv_mdl_t m_e820_map{};
+    bfvmm::intel_x64::vcpu_global_state_t m_vcpu_global_state{};
 
     uart::port_type m_uart_port{};
     uart::port_type m_pt_uart_port{};
