@@ -55,6 +55,9 @@ struct vm_t {
     uint64_t size;
 
     int used;
+
+    struct mv_handle_t handle;
+    struct mv_mdl_t *e820_map;
 };
 
 static struct vm_t g_vms[MAX_VMS] = {0};
@@ -125,21 +128,56 @@ done:
 /* E820 Functions                                                             */
 /* -------------------------------------------------------------------------- */
 
+static inline int64_t
+setup_microv_e820_map(struct vm_t *vm)
+{
+    vm->e820_map = bfalloc_page(struct mv_mdl_t);
+    if (MV_NULL == vm->e820_map) {
+        BFERROR("setup_microv_e820_map: failed to alloc e820_map page\n");
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 int64_t
 add_e820_entry(void *ptr, uint64_t saddr, uint64_t eaddr, uint32_t type)
 {
     struct vm_t *vm = (struct vm_t *)ptr;
 
     if (vm->params->e820_entries >= E820_MAX_ENTRIES_ZEROPAGE) {
-        BFDEBUG("add_e820_entry: E820_MAX_ENTRIES_ZEROPAGE reached\n");
+        BFERROR("add_e820_entry: E820_MAX_ENTRIES_ZEROPAGE reached\n");
+        return FAILURE;
+    }
+
+    if (vm->e820_map->num_entries >= MV_MDL_MAP_MAX_NUM_ENTRIES) {
+        BFERROR("add_e820_entry: MV_MDL_MAP_MAX_NUM_ENTRIES reached\n");
         return FAILURE;
     }
 
     vm->params->e820_table[vm->params->e820_entries].addr = saddr;
     vm->params->e820_table[vm->params->e820_entries].size = eaddr - saddr;
     vm->params->e820_table[vm->params->e820_entries].type = type;
-    vm->params->e820_entries++;
+    ++vm->params->e820_entries;
 
+    vm->e820_map->entries[vm->e820_map->num_entries].gpa = saddr;
+    vm->e820_map->entries[vm->e820_map->num_entries].size = eaddr - saddr;
+
+    switch (type) {
+	    case E820_TYPE_RAM:
+            vm->e820_map->entries[vm->e820_map->num_entries].flags = MV_GPA_FLAG_CONVENTIONAL_MEM;
+            break;
+
+	    case E820_TYPE_RESERVED:
+            vm->e820_map->entries[vm->e820_map->num_entries].flags = MV_GPA_FLAG_RESERVED_MEM;
+            break;
+
+        default:
+            BFERROR("add_e820_entry: unknown/unsupported type\n");
+            return FAILURE;
+    }
+
+    ++vm->e820_map->num_entries;
     return SUCCESS;
 }
 
@@ -156,7 +194,7 @@ donate_page_r(
 
     ret = hypercall_domain_op__donate_page_r(vm->domainid, gpa, domain_gpa);
     if (ret != SUCCESS) {
-        BFDEBUG("donate_page: hypercall_domain_op__donate_page_r failed\n");
+        BFERROR("donate_page: hypercall_domain_op__donate_page_r failed\n");
         return ret;
     }
 
@@ -172,7 +210,7 @@ donate_page_rw(
 
     ret = hypercall_domain_op__donate_page_rw(vm->domainid, gpa, domain_gpa);
     if (ret != SUCCESS) {
-        BFDEBUG("donate_page: hypercall_domain_op__donate_page_rw failed\n");
+        BFERROR("donate_page: hypercall_domain_op__donate_page_rw failed\n");
         return ret;
     }
 
@@ -188,7 +226,7 @@ donate_page_rwe(
 
     ret = hypercall_domain_op__donate_page_rwe(vm->domainid, gpa, domain_gpa);
     if (ret != SUCCESS) {
-        BFDEBUG("donate_page: hypercall_domain_op__donate_page_rwe failed\n");
+        BFERROR("donate_page: hypercall_domain_op__donate_page_rwe failed\n");
         return ret;
     }
 
@@ -225,7 +263,7 @@ setup_uart(
     if (uart != 0) {
         ret = hypercall_domain_op__set_uart(vm->domainid, uart);
         if (ret != SUCCESS) {
-            BFDEBUG("donate_page: hypercall_domain_op__set_uart failed\n");
+            BFERROR("donate_page: hypercall_domain_op__set_uart failed\n");
             return ret;
         }
     }
@@ -242,7 +280,7 @@ setup_pt_uart(
     if (uart != 0) {
         ret = hypercall_domain_op__set_pt_uart(vm->domainid, uart);
         if (ret != SUCCESS) {
-            BFDEBUG("donate_page: hypercall_domain_op__set_pt_uart failed\n");
+            BFERROR("donate_page: hypercall_domain_op__set_pt_uart failed\n");
             return ret;
         }
     }
@@ -263,7 +301,7 @@ setup_cmdline(struct vm_t *vm, struct create_vm_from_bzimage_args *args)
 
     vm->cmdline = bfalloc_page(char);
     if (vm->cmdline == 0) {
-        BFDEBUG("setup_cmdline: failed to alloc cmdline page\n");
+        BFERROR("setup_cmdline: failed to alloc cmdline page\n");
         return FAILURE;
     }
 
@@ -290,7 +328,7 @@ setup_boot_params(
 
     vm->params = bfalloc_page(struct boot_params);
     if (vm->params == 0) {
-        BFDEBUG("setup_boot_params: failed to alloc start into page\n");
+        BFERROR("setup_boot_params: failed to alloc start into page\n");
         return FAILURE;
     }
 
@@ -309,8 +347,20 @@ setup_boot_params(
         return ret;
     }
 
-    ret = setup_e820_map(vm, args->size);
+    ret = setup_microv_e820_map(vm);
     if (ret != SUCCESS) {
+        return ret;
+    }
+
+    ret = setup_bootparams_e820_map(vm, args->size);
+    if (ret != SUCCESS) {
+        return ret;
+    }
+
+    ret = mv_vm_properties_op_set_e820(
+        &vm->handle, vm->domainid, 0, (mv_uint64_t)platform_virt_to_phys(vm->e820_map));
+    if (ret != SUCCESS) {
+        BFERROR("setup_boot_params: mv_vm_properties_op_set_e820 failed\n");
         return ret;
     }
 
@@ -365,32 +415,32 @@ setup_kernel(struct vm_t *vm, struct create_vm_from_bzimage_args *args)
     uint64_t kernel_offset = 0;
 
     if (args->bzimage == 0) {
-        BFDEBUG("setup_kernel: bzImage is null\n");
+        BFERROR("setup_kernel: bzImage is null\n");
         return FAILURE;
     }
 
     if (args->size == 0) {
-        BFDEBUG("setup_kernel: bzImage has 0 size\n");
+        BFERROR("setup_kernel: bzImage has 0 size\n");
         return FAILURE;
     }
 
     if (args->bzimage_size + args->initrd_size > args->size) {
-        BFDEBUG("setup_kernel: requested RAM is too small\n");
+        BFERROR("setup_kernel: requested RAM is too small\n");
         return FAILURE;
     }
 
     if (hdr->header != 0x53726448) {
-        BFDEBUG("setup_kernel: bzImage does not contain magic number\n");
+        BFERROR("setup_kernel: bzImage does not contain magic number\n");
         return FAILURE;
     }
 
     if (hdr->version < 0x020d) {
-        BFDEBUG("setup_kernel: unsupported bzImage protocol\n");
+        BFERROR("setup_kernel: unsupported bzImage protocol\n");
         return FAILURE;
     }
 
     if (hdr->code32_start != 0x100000) {
-        BFDEBUG("setup_kernel: unsupported bzImage start location\n");
+        BFERROR("setup_kernel: unsupported bzImage start location\n");
         return FAILURE;
     }
 
@@ -398,14 +448,14 @@ setup_kernel(struct vm_t *vm, struct create_vm_from_bzimage_args *args)
     vm->addr = bfalloc_buffer(char, vm->size);
 
     if (vm->addr == 0) {
-        BFDEBUG("setup_kernel: failed to alloc ram\n");
+        BFERROR("setup_kernel: failed to alloc ram\n");
         return FAILURE;
     }
 
     kernel_offset = ((hdr->setup_sects + 1) * 512);
 
     if (kernel_offset > args->bzimage_size) {
-        BFDEBUG("setup_kernel: corrupt setup_sects\n");
+        BFERROR("setup_kernel: corrupt setup_sects\n");
         return FAILURE;
     }
 
@@ -464,7 +514,7 @@ setup_bios_ram(struct vm_t *vm)
 
     vm->bios_ram = bfalloc_buffer(void, BIOS_RAM_SIZE);
     if (vm->bios_ram == 0) {
-        BFDEBUG("setup_bios_ram: failed to alloc bios ram\n");
+        BFERROR("setup_bios_ram: failed to alloc bios ram\n");
         return FAILURE;
     }
 
@@ -501,7 +551,7 @@ setup_32bit_gdt(struct vm_t *vm)
 
     vm->gdt = bfalloc_page(void);
     if (vm->gdt == 0) {
-        BFDEBUG("setup_32bit_gdt: failed to alloc gdt\n");
+        BFERROR("setup_32bit_gdt: failed to alloc gdt\n");
         return FAILURE;
     }
 
@@ -596,7 +646,7 @@ setup_32bit_register_state(struct vm_t *vm)
     ret |= hypercall_domain_op__set_ia32_pat(vm->domainid, 0x0606060606060606);
 
     if (ret != SUCCESS) {
-        BFDEBUG("setup_entry: setup_32bit_register_state failed\n");
+        BFERROR("setup_entry: setup_32bit_register_state failed\n");
         return FAILURE;
     }
 
@@ -621,13 +671,19 @@ common_create_vm_from_bzimage(
 
     args->domainid = INVALID_DOMAINID;
 
-    if (bfack() == 0) {
+    if (mv_present(MV_SPEC_ID1_VAL) == 0) {
+        BFERROR("mv_present failed\n");
+        return COMMON_NO_HYPERVISOR;
+    }
+
+    if (mv_handle_op_open_handle(MV_SPEC_ID1_VAL, &vm->handle) != 0) {
+        BFERROR("mv_handle_op_open failed\n");
         return COMMON_NO_HYPERVISOR;
     }
 
     vm->domainid = hypercall_domain_op__create_domain();
     if (vm->domainid == INVALID_DOMAINID) {
-        BFDEBUG("__domain_op__create_domain failed\n");
+        BFERROR("__domain_op__create_domain failed\n");
         return COMMON_CREATE_VM_FROM_BZIMAGE_FAILED;
     }
 
@@ -672,8 +728,13 @@ common_destroy(uint64_t domainid)
 
     ret = hypercall_domain_op__destroy_domain(vm->domainid);
     if (ret != SUCCESS) {
-        BFDEBUG("__domain_op__destroy_domain failed\n");
+        BFERROR("__domain_op__destroy_domain failed\n");
         return ret;
+    }
+
+    if (mv_handle_op_close_handle(&vm->handle) != 0) {
+        BFERROR("mv_handle_op_close failed\n");
+        return COMMON_NO_HYPERVISOR;
     }
 
     platform_free_rw(vm->bios_ram, BIOS_RAM_SIZE);

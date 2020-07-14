@@ -42,7 +42,7 @@ hlt_handler::hlt_handler(
 
     vcpu->add_exit_handler_for_reason(
         exit_reason::basic_exit_reason::hlt,
-        {&hlt_handler::handle, this}
+    {&hlt_handler::handle, this}
     );
 }
 

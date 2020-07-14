@@ -37,9 +37,19 @@
 #include "vmexit/preemption_timer.h"
 #include "vmexit/vmcall.h"
 
+#include "vmcall/debug_op.h"
 #include "vmcall/domain_op.h"
+#include "vmcall/handle_op.h"
 #include "vmcall/run_op.h"
 #include "vmcall/vcpu_op.h"
+#include "vmcall/vm_kv_op.h"
+#include "vmcall/vm_management_op.h"
+#include "vmcall/vm_properties_op.h"
+#include "vmcall/vm_state_op.h"
+#include "vmcall/vp_exit_op.h"
+#include "vmcall/vp_management_op.h"
+#include "vmcall/vp_properties_op.h"
+#include "vmcall/vp_state_op.h"
 
 #include "emulation/cpuid.h"
 #include "emulation/mtrr.h"
@@ -406,8 +416,18 @@ private:
     vmcall_handler m_vmcall_handler;
 
     run_op_handler m_run_op_handler;
+    debug_op_handler m_debug_op_handler;
     domain_op_handler m_domain_op_handler;
+    handle_op_handler m_handle_op_handler;
     vcpu_op_handler m_vcpu_op_handler;
+    vm_kv_op_handler m_vm_kv_op_handler;
+    vm_management_op_handler m_vm_management_op_handler;
+    vm_properties_op_handler m_vm_properties_op_handler;
+    vm_state_op_handler m_vm_state_op_handler;
+    vp_exit_op_handler m_vp_exit_op_handler;
+    vp_management_op_handler m_vp_management_op_handler;
+    vp_properties_op_handler m_vp_properties_op_handler;
+    vp_state_op_handler m_vp_state_op_handler;
 
     cpuid_handler m_cpuid_handler;
     mtrr_handler m_mtrr_handler;

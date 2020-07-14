@@ -20,57 +20,64 @@
 // SOFTWARE.
 
 #include <hve/arch/intel_x64/vcpu.h>
-#include <hve/arch/intel_x64/vmexit/preemption_timer.h>
-
-// -----------------------------------------------------------------------------
-// Implementation
-// -----------------------------------------------------------------------------
+#include <hve/arch/intel_x64/vmcall/handle_op.h>
 
 namespace boxy::intel_x64
 {
 
-preemption_timer_handler::preemption_timer_handler(
+handle_op_handler::handle_op_handler(
     gsl::not_null<vcpu *> vcpu
 ) :
     m_vcpu{vcpu}
 {
-    using namespace vmcs_n;
-
-    if (vcpu->is_dom0()) {
+    if (vcpu->is_domU()) {
         return;
     }
 
-    vcpu->add_exit_handler_for_reason(
-        exit_reason::basic_exit_reason::preemption_timer_expired,
-    {&preemption_timer_handler::handle, this}
-    );
+    vcpu->add_vmcall_handler({&handle_op_handler::dispatch, this});
 }
 
-// -----------------------------------------------------------------------------
-// Add Handler / Enablers
-// -----------------------------------------------------------------------------
+void
+handle_op_handler::open_handle(vcpu *vcpu)
+{
+    // TODO: Implement handle support
+
+    vcpu->set_r10(0x42);
+    vcpu->set_rax(MV_STATUS_SUCCESS);
+}
 
 void
-preemption_timer_handler::add_handler(
-    const handler_delegate_t &d)
-{ m_handlers.push_back(d); }
+handle_op_handler::close_handle(vcpu *vcpu)
+{
+    // TODO: Implement handle support
 
-// -----------------------------------------------------------------------------
-// Handlers
-// -----------------------------------------------------------------------------
+    vcpu->set_rax(MV_STATUS_SUCCESS);
+}
 
 bool
-preemption_timer_handler::handle(vcpu_t *vcpu)
+handle_op_handler::dispatch(vcpu *vcpu)
 {
-    bfignored(vcpu);
-
-    for (const auto &d : m_handlers) {
-        if (d(m_vcpu)) {
-            return true;
-        }
+    if (mv_hypercall_opcode(vcpu->rax()) != MV_HANDLE_OP_VAL) {
+        return false;
     }
 
-    return false;
+    // TODO: Validate the handle
+
+    switch (mv_hypercall_index(vcpu->rax())) {
+        case MV_HANDLE_OP_OPEN_HANDLE_IDX_VAL:
+            this->open_handle(vcpu);
+            return true;
+
+        case MV_HANDLE_OP_CLOSE_HANDLE_IDX_VAL:
+            this->close_handle(vcpu);
+            return true;
+
+        default:
+            break;
+    };
+
+    vcpu->set_rax(MV_STATUS_FAILURE_UNKNOWN_HYPERCALL);
+    return true;
 }
 
 }

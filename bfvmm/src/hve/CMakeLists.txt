@@ -40,9 +40,19 @@ target_sources(boxy_hve PRIVATE
     $<${X64}:arch/intel_x64/vmexit/nmi_window.cpp>
     $<${X64}:arch/intel_x64/vmexit/preemption_timer.cpp>
     $<${X64}:arch/intel_x64/vmexit/vmcall.cpp>
+    $<${X64}:arch/intel_x64/vmcall/debug_op.cpp>
     $<${X64}:arch/intel_x64/vmcall/domain_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/handle_op.cpp>
     $<${X64}:arch/intel_x64/vmcall/run_op.cpp>
     $<${X64}:arch/intel_x64/vmcall/vcpu_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vm_kv_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vm_management_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vm_properties_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vm_state_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vp_exit_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vp_management_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vp_properties_op.cpp>
+    $<${X64}:arch/intel_x64/vmcall/vp_state_op.cpp>
     $<${X64}:arch/intel_x64/domain.cpp>
     $<${X64}:arch/intel_x64/uart.cpp>
     $<${X64}:arch/intel_x64/vcpu.cpp>

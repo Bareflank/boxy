@@ -224,9 +224,9 @@ private:
     uint64_t m_next_event_tsc{};
 
     uint64_t m_host_wc_tsc{};
-    struct timespec m_host_wc_rtc{};
+    struct timespec m_host_wc_rtc {};
     uint64_t m_guest_wc_tsc{};
-    struct timespec m_guest_wc_rtc{};
+    struct timespec m_guest_wc_rtc {};
 
 public:
 

@@ -28,12 +28,12 @@
 #include <bferrorcodes.h>
 
 enum e820_type {
-	E820_TYPE_RAM		= 1,
-	E820_TYPE_RESERVED	= 2,
-	E820_TYPE_ACPI		= 3,
-	E820_TYPE_NVS		= 4,
-	E820_TYPE_UNUSABLE	= 5,
-	E820_TYPE_PMEM		= 7
+    E820_TYPE_RAM       = 1,
+    E820_TYPE_RESERVED  = 2,
+    E820_TYPE_ACPI      = 3,
+    E820_TYPE_NVS       = 4,
+    E820_TYPE_UNUSABLE  = 5,
+    E820_TYPE_PMEM      = 7
 };
 
 /**
@@ -87,7 +87,7 @@ add_e820_entry(void *ptr, uint64_t saddr, uint64_t eaddr, uint32_t type);
  * @return SUCCESS on success, FAILURE otherwise
  */
 static inline int64_t
-setup_e820_map(void *vm, uint64_t size)
+setup_bootparams_e820_map(void *vm, uint64_t size)
 {
     status_t ret = 0;
 

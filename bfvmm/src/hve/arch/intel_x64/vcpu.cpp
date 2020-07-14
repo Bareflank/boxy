@@ -95,8 +95,18 @@ vcpu::vcpu(
     m_vmcall_handler{this},
 
     m_run_op_handler{this},
+    m_debug_op_handler{this},
     m_domain_op_handler{this},
+    m_handle_op_handler{this},
     m_vcpu_op_handler{this},
+    m_vm_kv_op_handler{this},
+    m_vm_management_op_handler{this},
+    m_vm_properties_op_handler{this},
+    m_vm_state_op_handler{this},
+    m_vp_exit_op_handler{this},
+    m_vp_management_op_handler{this},
+    m_vp_properties_op_handler{this},
+    m_vp_state_op_handler{this},
 
     m_cpuid_handler{this},
     m_mtrr_handler{this},
