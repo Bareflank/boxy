@@ -1599,7 +1599,8 @@ enum mv_vp_exit_t {
     mv_vp_exit_t_hlt = 3,
     mv_vp_exit_t_fault = 4,
     mv_vp_exit_t_sync_tsc = 5,
-    mv_vp_exit_t_max = 6
+    mv_vp_exit_t_suspend = 6,
+    mv_vp_exit_t_max = 7
 };
 
 static inline mv_status_t
